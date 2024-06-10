@@ -290,8 +290,8 @@ def preproc_labs(dataset_path: str, version_path:str, cohort_path:str, time_col:
     cohort = pd.read_csv(cohort_path, compression='gzip', parse_dates = ['admittime'])
     if version_path=="mimiciv/1.0":
         adm = pd.read_csv("./"+version_path+"/core/admissions.csv.gz", header=0, index_col=None, compression='gzip', usecols=['subject_id', 'hadm_id', 'admittime', 'dischtime'], parse_dates=['admittime', 'dischtime'])
-    elif version_path=="mimiciv/2.0":
-        adm = pd.read_csv("./"+version_path+"/hosp/admissions.csv.gz", header=0, index_col=None, compression='gzip', usecols=['subject_id', 'hadm_id', 'admittime', 'dischtime'], parse_dates=['admittime', 'dischtime'])
+    elif version_path=="mimiciv/2.2":
+        adm = pd.read_csv("/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"+version_path+"/hosp/admissions.csv.gz", header=0, index_col=None, compression='gzip', usecols=['subject_id', 'hadm_id', 'admittime', 'dischtime'], parse_dates=['admittime', 'dischtime'])
         
     # read module w/ custom params
     chunksize = 10000000

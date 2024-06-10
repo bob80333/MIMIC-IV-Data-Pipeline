@@ -2,4 +2,8 @@ mimic-iv-1.0
 scrap
 *.gzip
 *.csv.gz
+*.csv
 *summary*.txt
+__pycache__/
+*.pyc
+/data/
