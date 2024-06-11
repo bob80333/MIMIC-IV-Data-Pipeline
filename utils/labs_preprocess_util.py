@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import Union, List, Tuple
 import pandas as pd
 import numpy as np
+
 if not os.path.exists("./data/temp"):
     os.makedirs("./data/temp")
 
@@ -20,21 +21,25 @@ def hadm_imputer(
             pd._libs.tslibs.timestamps.Timestamp,
         ]
     ],
-) -> Tuple[str, pd._libs.tslibs.timestamps.Timestamp, pd._libs.tslibs.timestamps.Timestamp]:
+) -> Tuple[str, pd._libs.tslibs.timestamps.Timestamp]:
     if not np.isnan(hadm_old):
         hadm_old = int(hadm_old)
         admtime, dischtime = next(
             (adm_time, disch_time)
             for h_id, adm_time, disch_time in hadm_ids_w_timestamps
             if h_id == hadm_old
+        )        
+        return (
+            hadm_old,
+            admtime.strftime("%Y-%m-%d %H:%M:%S"),
+            dischtime.strftime("%Y-%m-%d %H:%M:%S"),
         )
-        return hadm_old, admtime, dischtime
 
     hadm_ids_w_timestamps = [
         [
             hadm_id,
-            admittime,
-            dischtime,
+            admittime.strftime("%Y-%m-%d %H:%M:%S"),
+            dischtime.strftime("%Y-%m-%d %H:%M:%S"),
             charttime.normalize() - admittime.normalize(),
             charttime.normalize() - dischtime.normalize(),
         ]
@@ -54,7 +59,7 @@ def hadm_imputer(
 
 def impute_missing_hadm_ids(
     lab_table: pd.DataFrame, subject_hadm_admittime_tracker: defaultdict
-) -> pd.DataFrame:
+) -> str:
     list_rows_lab = []
     all_lab_cols = lab_table.columns
     for row in lab_table.itertuples():
@@ -62,14 +67,16 @@ def impute_missing_hadm_ids(
         new_hadm_id, new_admittime, new_dischtime = hadm_imputer(
             row.charttime,
             row.hadm_id,
-            subject_hadm_admittime_tracker.get(row.subject_id, [])
+            subject_hadm_admittime_tracker.get(row.subject_id, []),
         )
         existing_data["hadm_id_new"] = new_hadm_id
         existing_data["admittime"] = new_admittime
         existing_data["dischtime"] = new_dischtime
         list_rows_lab.append(existing_data)
     
-    return pd.DataFrame(list_rows_lab)
+    tab_name = f"./data/temp/{str(uuid1())}.csv"
+    pd.DataFrame(list_rows_lab).to_csv(tab_name, index=False)
+    return tab_name
 
 def impute_hadm_ids(
     lab_table: Union[str, pd.DataFrame], admission_table: Union[str, pd.DataFrame]
@@ -81,14 +88,22 @@ def impute_hadm_ids(
     lab_table["charttime"] = pd.to_datetime(lab_table.charttime)
     admission_table["admittime"] = pd.to_datetime(admission_table.admittime)
     admission_table["dischtime"] = pd.to_datetime(admission_table.dischtime)
+
     subject_hadm_admittime_tracker = defaultdict(list)
     for row in admission_table.itertuples():
         subject_hadm_admittime_tracker[row.subject_id].append([row.hadm_id, row.admittime, row.dischtime])
-    lab_table_chunks = np.array_split(lab_table, 100)
+
+    lab_table_chunks = np.array_split(lab_table, 8)
     impute_missing_hadm_ids_w_lookup = partial(impute_missing_hadm_ids, subject_hadm_admittime_tracker=subject_hadm_admittime_tracker)
-    
     with Pool(8) as p:
-        result_chunks = p.map(impute_missing_hadm_ids_w_lookup, lab_table_chunks)
+        result_files = p.map(impute_missing_hadm_ids_w_lookup, lab_table_chunks)
+
+    # Load all intermediate CSV files and concatenate
+    lab_tab = pd.concat([pd.read_csv(file) for file in result_files], ignore_index=True)
+
+    # Clean up intermediate CSV files
+    for file in result_files:
+        os.remove(file)
     
-    return pd.concat(result_chunks, ignore_index=True)
+    return lab_tab
 

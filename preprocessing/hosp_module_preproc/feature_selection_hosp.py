@@ -49,7 +49,8 @@ def feature_nonicu(cohort_output,version_path, diag_flag=True,lab_flag=True,proc
     if lab_flag:
         print("[EXTRACTING LABS DATA]")
         lab = preproc_labs("/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"+version_path+"/hosp/labevents.csv.gz", version_path,'./data/cohort/'+cohort_output+'.csv.gz','charttime', 'base_anchor_year', dtypes=None, usecols=None)
-        lab = drop_wrong_uom(lab, 0.95)
+        #COMMENTED BY ROHAN
+        #lab = drop_wrong_uom(lab, 0.95)
         lab[['subject_id', 'hadm_id', 'charttime', 'itemid','admittime','lab_time_from_admit','valuenum']].to_csv('./data/features/preproc_labs.csv.gz', compression='gzip', index=False)
         print("[SUCCESSFULLY SAVED LABS DATA]")
         
