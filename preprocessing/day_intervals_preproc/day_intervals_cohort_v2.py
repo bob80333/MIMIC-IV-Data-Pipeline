@@ -202,3 +202,4 @@ def extract_data(use_ICU, label, time, icd_code, root_dir, disease_label, cohort
     with open(f"./data/cohort/{summary_output}.txt", "w") as text_file:
         text_file.write(summary)
     print("[ SUMMARY SUCCESSFULLY SAVED ]")
+    return cohort_output

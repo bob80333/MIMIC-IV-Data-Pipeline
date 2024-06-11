@@ -33,7 +33,10 @@ def feature_nonicu(cohort_output,version_path, diag_flag=True,lab_flag=True,proc
         diag[['subject_id', 'hadm_id', 'icd_code','root_icd10_convert','root']].to_csv("./data/features/preproc_diag.csv.gz", compression='gzip', index=False)
         print("[SUCCESSFULLY SAVED DIAGNOSIS DATA]")
 
-
+#     if lab_flag:    
+#         out = preproc_out("./mimic-iv-1.0/icu/outputevents.csv.gz", './data/cohort/'+cohort_output+'.csv.gz', 'charttime', dtypes=None, usecols=None)
+#         out[['subject_id', 'hadm_id', 'stay_id', 'itemid', 'charttime', 'intime', 'event_time_from_admit']].to_csv("./data/features/preproc_out_icu.csv.gz", compression='gzip', index=False)
+    
     if proc_flag:
         print("[EXTRACTING PROCEDURES DATA]")
         proc = preproc_proc("/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"+version_path+"/hosp/procedures_icd.csv.gz",'./data/cohort/'+cohort_output+'.csv.gz', 'chartdate', 'base_anchor_year', dtypes=None, usecols=None)
