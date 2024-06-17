@@ -235,17 +235,7 @@ def get_case_ctrls(df:pd.DataFrame, gap:int, group_col:str, visit_col:str, admit
 def extract_data(use_ICU:str, label:str, time:int, icd_code:str, root_dir, disease_label, cohort_output=None, summary_output=None):
     """
     Extracts cohort data and summary from MIMIC-IV data based on provided parameters.
-
-    Parameters:
-    time: time interval for readmission or phenotype for prediction
-    icd_code: ICD-10 code for disease filtering cohort data
-    disease_label: disease label for which disease we want to predict
-    cohort_output: name of labelled cohort output file
-    summary_output: name of summary output file
-    use_ICU: state whether to use ICU patient data or not
-    label: Can either be '{day} day Readmission' or 'Mortality', decides what binary data label signifies
     """
-    
     if not cohort_output:
         cohort_output="cohort_" + use_ICU.lower() + "_" + label.lower().replace(" ", "_") + "_" + str(time) + "_" + disease_label
     if not summary_output:

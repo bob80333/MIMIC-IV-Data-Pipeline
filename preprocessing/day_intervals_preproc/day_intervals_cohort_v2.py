@@ -27,6 +27,7 @@ def get_visit_pts(mimic4_path, group_col, visit_col, admit_col, disch_col, adm_v
     if not use_ICU:
         visit['los'] = (visit[disch_col] - visit[admit_col]).dt.days
         if use_admn:
+            # remove hospitalizations with a death; impossible for readmission for such visits
             visit = visit.loc[visit.hospital_expire_flag == 0]
 
     if use_admn:
@@ -37,7 +38,7 @@ def get_visit_pts(mimic4_path, group_col, visit_col, admit_col, disch_col, adm_v
             usecols=['subject_id', 'dod'], 
             parse_dates=['dod']
         )
-        visit = visit.merge(pts, how='inner', on='subject_id')
+        visit = visit.merge(pts, how='inner', left_on='subject_id', right_on='subject_id')
         visit = visit.loc[(visit.dod.isna()) | (visit.dod >= visit[disch_col])]
 
     if disease_label:
@@ -56,11 +57,11 @@ def get_visit_pts(mimic4_path, group_col, visit_col, admit_col, disch_col, adm_v
     
     if use_ICU:
         visit_pts = visit[[group_col, visit_col, adm_visit_col, admit_col, disch_col, 'los']].merge(
-            pts, how='inner', on=group_col
+            pts, how='inner', left_on=group_col, right_on=group_col
         )
     else:
         visit_pts = visit[[group_col, visit_col, admit_col, disch_col, 'los']].merge(
-            pts, how='inner', on=group_col
+            pts, how='inner', left_on=group_col, right_on=group_col
         )
 
     visit_pts['Age'] = visit_pts['anchor_age']
@@ -73,8 +74,7 @@ def get_visit_pts(mimic4_path, group_col, visit_col, admit_col, disch_col, adm_v
         usecols=['hadm_id', 'insurance', 'race'], 
         index_col=None
     )
-    visit_pts = visit_pts.merge(eth, how='inner', on='hadm_id')
-
+    visit_pts= visit_pts.merge(eth, how='inner', left_on='hadm_id', right_on='hadm_id')
     return visit_pts if use_ICU else visit_pts.dropna(subset=['min_valid_year'])
 
 def partition_by_los(df, los, group_col, admit_col,disch_col):
@@ -147,7 +147,7 @@ def extract_data(use_ICU, label, time, icd_code, root_dir, disease_label, cohort
     summary_output = summary_output or f"summary_{use_ICU.lower()}_{label.lower().replace(' ', '_')}_{time}_{disease_label}"
     
     print(f"EXTRACTING FOR: | {use_ICU.upper()} | {label.upper()} {'DUE TO ' + disease_label.upper() if disease_label else ''} | {'ADMITTED DUE TO ' + icd_code.upper() if icd_code != 'No Disease Filter' else ''} | {time} |")
-
+    ICU = use_ICU
     use_mort = label == "Mortality"
     use_admn = label == "Readmission"
     use_los = label == "Length of Stay"
@@ -191,7 +191,7 @@ def extract_data(use_ICU, label, time, icd_code, root_dir, disease_label, cohort
     print("[ COHORT SUCCESSFULLY SAVED ]")
 
     summary = "\n".join([
-        f"{label} FOR {use_ICU} DATA",
+        f"{label} FOR {ICU} DATA",
         f"# Admission Records: {cohort.shape[0]}",
         f"# Patients: {cohort[group_col].nunique()}",
         f"# Positive cases: {cohort[cohort['label'] == 1].shape[0]}",
