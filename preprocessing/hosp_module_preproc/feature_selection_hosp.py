@@ -54,7 +54,33 @@ def feature_nonicu(cohort_output,version_path, diag_flag=True,lab_flag=True,proc
         lab[['subject_id', 'hadm_id', 'charttime', 'itemid','admittime','lab_time_from_admit','valuenum']].to_csv('./data/features/preproc_labs.csv.gz', compression='gzip', index=False)
         print("[SUCCESSFULLY SAVED LABS DATA]")
         
+def feature_nonicu_imputation(cohort_output,version_path, diag_flag=True,lab_flag=True,proc_flag=True,med_flag=True):
+    if diag_flag:
+        print("[EXTRACTING DIAGNOSIS DATA]")  
+        diag = preproc_icd_module_imputation("/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"+version_path+"/hosp/diagnoses_icd.csv.gz", './data/cohort/'+cohort_output+'.csv.gz', './utils/mappings/ICD9_to_ICD10_mapping.txt', map_code_colname='diagnosis_code')
+        diag.to_csv("./data/features/imputation_non_icu_preproc_diag.csv.gz", compression='gzip', index=False)
+        print("[SUCCESSFULLY SAVED DIAGNOSIS DATA]")
+
+    if proc_flag:
+        print("[EXTRACTING PROCEDURES DATA]")
+        proc = preproc_proc_imputation("/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"+version_path+"/hosp/procedures_icd.csv.gz",'./data/cohort/'+cohort_output+'.csv.gz', 'chartdate', 'base_anchor_year', dtypes=None, usecols=None)
+        proc.to_csv("./data/features/imputation_non_icu_preproc_proc.csv.gz", compression='gzip', index=False)
+        print("[SUCCESSFULLY SAVED PROCEDURES DATA]")
+    
+    if med_flag:
+        print("[EXTRACTING MEDICATIONS DATA]")
+        med = preproc_meds_imputation("/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"+version_path+"/hosp/prescriptions.csv.gz", './data/cohort/'+cohort_output+'.csv.gz','./utils/mappings/ndc_product.txt')
+        med.to_csv('./data/features/imputation_non_icu_preproc_med.csv.gz', compression='gzip', index=False)
+        print("[SUCCESSFULLY SAVED MEDICATIONS DATA]")
         
+    if lab_flag:
+        print("[EXTRACTING LABS DATA]")
+        lab = preproc_labs_imputation("/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"+version_path+"/hosp/labevents.csv.gz", version_path,'./data/cohort/'+cohort_output+'.csv.gz','charttime', 'base_anchor_year', dtypes=None, usecols=None)
+        #COMMENTED BY ROHAN
+        #lab = drop_wrong_uom(lab, 0.95)
+        lab.to_csv('./data/features/imputation_non_icu_preproc_labs.csv.gz', compression='gzip', index=False)
+        print("[SUCCESSFULLY SAVED LABS DATA]")
+
         
 def preprocess_features_hosp(cohort_output, diag_flag,proc_flag,med_flag,lab_flag,group_diag,group_med,group_proc,clean_labs,impute_labs,thresh,left_thresh):
     #print(thresh)

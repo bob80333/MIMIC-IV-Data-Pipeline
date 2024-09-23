@@ -210,11 +210,11 @@ def extract_imputation_data(use_ICU, root_dir, cohort_output=None, summary_outpu
 
     use_ICU = use_ICU == "ICU"
     group_col = 'subject_id'
-    visit_col = 'stay_id' if use_ICU else 'hadm_id'
+    #visit_col = 'stay_id' if use_ICU else 'hadm_id'
     admit_col = 'intime' if use_ICU else 'admittime'
     disch_col = 'outtime' if use_ICU else 'dischtime'
-    death_col = 'dod'
-    adm_visit_col = 'hadm_id' if use_ICU else None
+    #death_col = 'dod'
+    #adm_visit_col = 'hadm_id' if use_ICU else None
     mimic4_path = root_dir + "/mimiciv/2.2/"
     file_path = "icu/icustays.csv.gz" if use_ICU else "hosp/admissions.csv.gz"
     visit = pd.read_csv(
@@ -225,31 +225,25 @@ def extract_imputation_data(use_ICU, root_dir, cohort_output=None, summary_outpu
     )
     
     if not use_ICU:
-        visit['los'] = (visit[disch_col] - visit[admit_col]).dt.days
+        visit['los'] = (visit[disch_col] - visit[admit_col])
     
     pts = pd.read_csv(
         mimic4_path + "hosp/patients.csv.gz", 
         compression='gzip', 
         header=0
-        #usecols=[group_col, 'anchor_year', 'anchor_age', 'anchor_year_group', 'dod', 'gender']
     )
 
     pts['yob'] = pts['anchor_year'] - pts['anchor_age']
     pts['min_valid_year'] = pts['anchor_year'] + (2019 - pts['anchor_year_group'].str.slice(start=-4).astype(int))
     visit_pts = visit.merge(pts, how='inner', left_on=group_col, right_on=group_col)
     
-    #print(visit_pts.columns)
-    
     if use_ICU:
         eth = pd.read_csv(
         mimic4_path + "hosp/admissions.csv.gz", 
         compression='gzip', 
         header=0, 
-        #usecols=['hadm_id', 'insurance', 'race'], 
         index_col=None
         )
-        #remove the column subject_id_y
-        #eth = eth.drop(columns=['subject_id_y'])
         visit_pts= visit_pts.merge(eth, how='inner', left_on='hadm_id', right_on='hadm_id')
     visit_pts.to_csv(f"./data/cohort/{cohort_output}.csv.gz", index=False, compression='gzip')
     return cohort_output
