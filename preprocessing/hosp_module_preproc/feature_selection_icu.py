@@ -35,13 +35,12 @@ def feature_icu(
     chart_flag=True,
     proc_flag=True,
     med_flag=True,
+    mimiciv_path="",
 ):
     if diag_flag:
         print("[EXTRACTING DIAGNOSIS DATA]")
         diag = preproc_icd_module(
-            "/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"
-            + version_path
-            + "/hosp/diagnoses_icd.csv.gz",
+            mimiciv_path + version_path + "/hosp/diagnoses_icd.csv.gz",
             "./data/cohort/" + cohort_output + ".csv.gz",
             "./utils/mappings/ICD9_to_ICD10_mapping.txt",
             map_code_colname="diagnosis_code",
@@ -63,9 +62,7 @@ def feature_icu(
     if out_flag:
         print("[EXTRACTING OUTPUT EVENTS DATA]")
         out = preproc_out(
-            "/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"
-            + version_path
-            + "/icu/outputevents.csv.gz",
+            mimiciv_path + version_path + "/icu/outputevents.csv.gz",
             "./data/cohort/" + cohort_output + ".csv.gz",
             "charttime",
             dtypes=None,
@@ -89,9 +86,7 @@ def feature_icu(
     if chart_flag:
         print("[EXTRACTING CHART EVENTS DATA]")
         chart = preproc_chart(
-            "/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"
-            + version_path
-            + "/icu/chartevents.csv.gz",
+            mimiciv_path + version_path + "/icu/chartevents.csv.gz",
             "./data/cohort/" + cohort_output + ".csv.gz",
             "charttime",
             dtypes=None,
@@ -107,9 +102,7 @@ def feature_icu(
     if proc_flag:
         print("[EXTRACTING PROCEDURES DATA]")
         proc = preproc_proc(
-            "/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"
-            + version_path
-            + "/icu/procedureevents.csv.gz",
+            mimiciv_path + version_path + "/icu/procedureevents.csv.gz",
             "./data/cohort/" + cohort_output + ".csv.gz",
             "starttime",
             dtypes=None,
@@ -133,9 +126,7 @@ def feature_icu(
     if med_flag:
         print("[EXTRACTING MEDICATIONS DATA]")
         med = preproc_meds(
-            "/data/corpora_alpha/MIMIC/MIMIC_IV_2.2/files/"
-            + version_path
-            + "/icu/inputevents.csv.gz",
+            mimiciv_path + version_path + "/icu/inputevents.csv.gz",
             "./data/cohort/" + cohort_output + ".csv.gz",
         )
         med = med.select(

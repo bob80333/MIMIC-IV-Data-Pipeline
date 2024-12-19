@@ -18,9 +18,7 @@ def dataframe_from_csv(path, compression="gzip"):
 
 def read_admissions_table(mimic4_path):
     path = os.path.join(mimic4_path, "core/admissions.csv.gz")
-    admits = pl.read_csv(
-        path, compression="gzip", parse_dates=["admittime", "dischtime", "deathtime"]
-    )
+    admits = pl.read_csv(path, try_parse_dates=True)
     admits = admits.select(
         ["subject_id", "hadm_id", "admittime", "dischtime", "deathtime", "ethnicity"]
     )
@@ -29,7 +27,7 @@ def read_admissions_table(mimic4_path):
 
 def read_patients_table(mimic4_path):
     path = os.path.join(mimic4_path, "core/patients.csv.gz")
-    pats = pl.read_csv(path, compression="gzip", parse_dates=["dod"])
+    pats = pl.read_csv(path, try_parse_dates=True)
     pats = pats.select(
         [
             "subject_id",
@@ -47,13 +45,13 @@ def read_patients_table(mimic4_path):
 ########################## DIAGNOSES ##########################
 def read_diagnoses_icd_table(mimic4_path):
     path = os.path.join(mimic4_path, "hosp/diagnoses_icd.csv.gz")
-    diag = pl.read_csv(path, compression="gzip")
+    diag = pl.read_csv(path)
     return diag
 
 
 def read_d_icd_diagnoses_table(mimic4_path):
     path = os.path.join(mimic4_path, "hosp/d_icd_diagnoses.csv.gz")
-    d_icd = pl.read_csv(path, compression="gzip")
+    d_icd = pl.read_csv(path)
     d_icd = d_icd.select(["icd_code", "long_title"])
     return d_icd
 
@@ -105,13 +103,13 @@ def standardize_icd(mapping: pl.DataFrame, df: pl.DataFrame, root=False):
 ########################## PROCEDURES ##########################
 def read_procedures_icd_table(mimic4_path):
     path = os.path.join(mimic4_path, "hosp/procedures_icd.csv.gz")
-    proc = pl.read_csv(path, compression="gzip")
+    proc = pl.read_csv(path)
     return proc
 
 
 def read_d_icd_procedures_table(mimic4_path):
     path = os.path.join(mimic4_path, "hosp/d_icd_procedures.csv.gz")
-    p_icd = pl.read_csv(path, compression="gzip")
+    p_icd = pl.read_csv(path)
     p_icd = p_icd.select(["icd_code", "long_title"])
     return p_icd
 
@@ -136,11 +134,10 @@ def read_icd_mapping(map_path):
 def preproc_meds(module_path: str, adm_cohort_path: str) -> pl.DataFrame:
 
     adm = pl.read_csv(
-        adm_cohort_path, columns=["hadm_id", "stay_id", "intime"], parse_dates=True
+        adm_cohort_path, columns=["hadm_id", "stay_id", "intime"], try_parse_dates=True
     )
     med = pl.read_csv(
         module_path,
-        compression="gzip",
         columns=[
             "subject_id",
             "stay_id",
@@ -176,12 +173,11 @@ def preproc_proc(
         """Gets the initial module data with patients anchor year data and only the year of the charttime"""
         module = pl.read_csv(
             dataset_path,
-            compression="gzip",
             columns=usecols,
             dtypes=dtypes,
-            parse_dates=True,
+            try_parse_dates=True,
         ).unique()
-        cohort = pl.read_csv(cohort_path, compression="gzip", parse_dates=True)
+        cohort = pl.read_csv(cohort_path, try_parse_dates=True)
         return module.join(
             cohort.select(["subject_id", "hadm_id", "stay_id", "intime", "outtime"]),
             on="stay_id",
@@ -207,12 +203,11 @@ def preproc_out(
     def merge_module_cohort() -> pl.DataFrame:
         module = pl.read_csv(
             dataset_path,
-            compression="gzip",
             columns=usecols,
             dtypes=dtypes,
-            parse_dates=True,
+            try_parse_dates=True,
         ).unique()
-        cohort = pl.read_csv(cohort_path, compression="gzip", parse_dates=True)
+        cohort = pl.read_csv(cohort_path, try_parse_dates=True)
         return module.join(
             cohort.select(["stay_id", "intime", "outtime"]), on="stay_id", how="inner"
         )
@@ -233,28 +228,26 @@ def preproc_chart(
 ) -> pl.DataFrame:
     """Function for getting hosp observations pertaining to a pickled cohort. Function is structured to save memory when reading and transforming data."""
 
-    cohort = pl.read_csv(cohort_path, compression="gzip", parse_dates=True)
-    df_cohort = pl.DataFrame()
-    chunksize = 10_000_000
-    for chunk in tqdm(
-        pl.read_csv(
-            dataset_path,
-            compression="gzip",
-            columns=usecols,
-            dtypes=dtypes,
-            parse_dates=True,
-            batch_size=chunksize,
-        )
-    ):
-        chunk = chunk.drop_nulls(subset=["valuenum"])
-        chunk_merged = chunk.join(
-            cohort.select(["stay_id", "intime"]), on="stay_id", how="inner"
-        )
-        chunk_merged = chunk_merged.with_column(
+    # using scan_csv, polars will automatically try to use streaming, which is more memory efficient
+
+    cohort = pl.scan_csv(cohort_path, try_parse_dates=True)
+
+    query = (
+        pl.scan_csv(dataset_path, try_parse_dates=True)
+        .select(usecols)
+        .drop_nulls(subset=["valuenum"])
+        .join(cohort.select(["stay_id", "intime"]), on="stay_id", how="inner")
+        .with_columns(
             (pl.col(time_col) - pl.col("intime")).alias("event_time_from_admit")
         )
-        chunk_merged = chunk_merged.drop_nulls().unique()
-        df_cohort = df_cohort.vstack(chunk_merged)
+        .drop_nulls()
+        .unique()
+    )
+    # explain the query, show what operations cannot be streamed
+    print(query.explain(streaming=True))
+
+    df_cohort = query.collect()
+
     print("# Unique Events:  ", df_cohort["itemid"].n_unique())
     print("# Admissions:  ", df_cohort["stay_id"].n_unique())
     print("Total rows", df_cohort.shape[0])
@@ -271,8 +264,8 @@ def preproc_icd_module(
     """Takes an module dataset with ICD codes and puts it in long_format, optionally mapping ICD-codes by a mapping table path"""
 
     def get_module_cohort(module_path: str, cohort_path: str):
-        module = pl.read_csv(module_path, compression="gzip")
-        adm_cohort = pl.read_csv(adm_cohort_path, compression="gzip")
+        module = pl.read_csv(module_path)
+        adm_cohort = pl.read_csv(adm_cohort_path)
         return module.join(
             adm_cohort.select(["hadm_id", "stay_id", "label"]),
             on="hadm_id",
