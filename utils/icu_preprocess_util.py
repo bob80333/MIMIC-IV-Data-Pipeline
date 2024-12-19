@@ -229,6 +229,7 @@ def preproc_chart(
     """Function for getting hosp observations pertaining to a pickled cohort. Function is structured to save memory when reading and transforming data."""
 
     # using scan_csv, polars will automatically try to use streaming, which is more memory efficient
+    # every operation in this function is lazy, so no data is loaded into memory until the final collect
 
     cohort = pl.scan_csv(cohort_path, try_parse_dates=True)
 
@@ -243,8 +244,6 @@ def preproc_chart(
         .drop_nulls()
         .unique()
     )
-    # explain the query, show what operations cannot be streamed
-    print(query.explain(streaming=True))
 
     df_cohort = query.collect()
 

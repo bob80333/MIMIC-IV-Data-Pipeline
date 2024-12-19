@@ -94,7 +94,18 @@ def feature_icu(
         )
         # COMMENTED BY ROHAN
         # chart = drop_wrong_uom(chart, 0.95)
-        chart = chart.select(["stay_id", "itemid", "event_time_from_admit", "valuenum"])
+        chart = chart.select(
+            ["stay_id", "itemid", "event_time_from_admit", "valuenum"]
+        )  # convert event_time_from_admit to string as days, hours, minutes, etc
+        chart = chart.with_columns(
+            pl.col("event_time_from_admit")
+            .dt.to_string(format="polars")
+            .alias("event_time_from_admit_str")
+        )
+        chart = chart.select(
+            ["stay_id", "itemid", "event_time_from_admit_str", "valuenum"]
+        )
+
         with gzip.open("./data/features/preproc_chart_icu.csv.gz", "wt") as f:
             chart.write_csv(f)
         print("[SUCCESSFULLY SAVED CHART EVENTS DATA]")
