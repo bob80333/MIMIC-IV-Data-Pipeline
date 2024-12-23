@@ -41,7 +41,7 @@ def feature_icu(
         print("[EXTRACTING DIAGNOSIS DATA]")
         diag = preproc_icd_module(
             mimiciv_path + version_path + "/hosp/diagnoses_icd.csv.gz",
-            "./data/cohort/" + cohort_output + ".csv.gz",
+            "./data/cohort/" + cohort_output + ".csv",
             "./utils/mappings/ICD9_to_ICD10_mapping.txt",
             map_code_colname="diagnosis_code",
         )
@@ -63,7 +63,7 @@ def feature_icu(
         print("[EXTRACTING OUTPUT EVENTS DATA]")
         out = preproc_out(
             mimiciv_path + version_path + "/icu/outputevents.csv.gz",
-            "./data/cohort/" + cohort_output + ".csv.gz",
+            "./data/cohort/" + cohort_output + ".csv",
             "charttime",
             dtypes=None,
             usecols=None,
@@ -87,7 +87,7 @@ def feature_icu(
         print("[EXTRACTING CHART EVENTS DATA]")
         chart = preproc_chart(
             mimiciv_path + version_path + "/icu/chartevents.csv.gz",
-            "./data/cohort/" + cohort_output + ".csv.gz",
+            "./data/cohort/" + cohort_output + ".csv",
             "charttime",
             dtypes=None,
             usecols=["stay_id", "charttime", "itemid", "valuenum", "valueuom"],
@@ -114,7 +114,7 @@ def feature_icu(
         print("[EXTRACTING PROCEDURES DATA]")
         proc = preproc_proc(
             mimiciv_path + version_path + "/icu/procedureevents.csv.gz",
-            "./data/cohort/" + cohort_output + ".csv.gz",
+            "./data/cohort/" + cohort_output + ".csv",
             "starttime",
             dtypes=None,
             usecols=["stay_id", "starttime", "itemid"],
@@ -138,7 +138,7 @@ def feature_icu(
         print("[EXTRACTING MEDICATIONS DATA]")
         med = preproc_meds(
             mimiciv_path + version_path + "/icu/inputevents.csv.gz",
-            "./data/cohort/" + cohort_output + ".csv.gz",
+            "./data/cohort/" + cohort_output + ".csv",
         )
         med = med.select(
             [
